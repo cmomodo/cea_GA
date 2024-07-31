@@ -36,4 +36,4 @@ jobs:
     - name: Deploy Lambda FUnction #zip lambda directory and updates lambda function.
       run: |
         zip -r lambda.zip lambda/
-        aws lambda update-function-code --function-name cea_GA --zip-file fileb://lambda.zip
+        aws lambda update-function-code --function-name my-test-lambda --zip-file fileb://lambda.zip
