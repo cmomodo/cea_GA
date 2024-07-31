@@ -1,0 +1,20 @@
+name: my test lambda
+on: [push]
+jobs:
+  run-shell-commands:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.12
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r lambda/requirements.txt -t lambda/
+      - name: Deploy Lambda Function
+        run: |
+          zip -r lambda.zip lambda/
+          aws lambda update-function-code --function-name my-test-lambda --zip-file fileb://lambda.zip
