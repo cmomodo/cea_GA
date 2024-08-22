@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "lambda/"
-
+#runs of ubuntu-latest
 jobs:
   deploy-lambda:
     runs-on: ubuntu-latest
