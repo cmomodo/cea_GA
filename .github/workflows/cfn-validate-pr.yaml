@@ -1,0 +1,71 @@
+name: validate - pr request
+
+on:
+  pull_request:
+    paths:
+      - "cloudformation/*"
+
+permissions:
+  contents: read
+  pull_requests: write
+
+jobs:
+  validate-cfn:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Validate CloudFormation
+        run: aws cloudformation validate-template --template-body file://cloudformation/s3-bucket.yaml
+
+      - name: Deploy stack
+        run: |
+          stack_name="pr-test-stack-${{ github.event.pull_request.number }}"
+          aws cloudformation create-stack --stack-name $stack_name --template-body file://cloudformation/s3-bucket.yaml --parameters ParameterKey=Environment,ParameterValue=dev
+
+      - name: Wait for stack to complete
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pullRequest } = await github.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            const { data: checks } = await github.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pullRequest.head.sha
+            });
+            const check = checks.check_runs.find(check => check.name === 'validate-cfn');
+            if (check.conclusion === 'success') {
+              return 'success';
+            } else {
+              return 'failure';
+
+  cleanup-on-merge:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+
+    steps:
+      - name: Delete stack
+        run: |
+          stack_name="pr-test-stack-${{ github.event.pull_request.number }}"
+          aws cloudformation delete-stack --stack-name $stack_name
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
