@@ -27,4 +27,4 @@ Resources:
 Outputs:
   BucketName:
     Value: !Ref S3Bucket
-    Description: The name of the S3 bucket
+    Description: updated the name of check the pull request
